@@ -7,12 +7,18 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import DashScopeEmbeddings
 from langchain_community.vectorstores import FAISS
 
-def process_uploaded_files(uploaded_files):
+# 定义一个全局的向量库存储根目录
+VECTOR_STORE_DIR = "./vector_stores"
+
+def process_uploaded_files(uploaded_files, user_id):
     """
+    修改：增加 user_id 参数，实现用户数据隔离
+
     统一处理上传的文件（PDF, DOCX, TXT），返回构建好的向量数据库 (FAISS)
     
     Args:
         uploaded_files: Streamlit file_uploader 返回的文件对象列表
+        user_id: 当前用户的 ID (用于生成唯一的存储路径)
     
     Returns:
         FAISS: 构建好的向量数据库，如果失败返回 None
@@ -72,8 +78,28 @@ def process_uploaded_files(uploaded_files):
     # 3. 创建向量库
     try:
         embeddings = DashScopeEmbeddings(model="text-embedding-v1")
-        vector_store = FAISS.from_documents(split_docs, embeddings)
+        # ✅ 关键修改 1：如果该用户已有向量库，先加载再添加，否则新建
+        # 构建该用户的专属路径
+        user_dir = os.path.join(VECTOR_STORE_DIR, str(user_id))
+        os.makedirs(user_dir, exist_ok=True) # 确保目录存在
+        
+        # 检查是否已有索引文件
+        index_path = os.path.join(user_dir, "index.faiss")
+        
+        if os.path.exists(index_path):
+            # 如果存在，加载旧的库
+            vector_store = FAISS.load_local(user_dir, embeddings, allow_dangerous_deserialization=True)
+            # 添加新文档
+            vector_store.add_documents(split_docs)
+        else:
+            # 如果不存在，创建新的
+            vector_store = FAISS.from_documents(split_docs, embeddings)
+        
+        # ✅ 关键修改 2：保存到硬盘 (持久化)
+        # 这一步是核心，它把数据写进了服务器硬盘
+        vector_store.save_local(user_dir)
         return vector_store, processed_files
+        
     except Exception as e:
         print(f"向量库构建失败: {e}")
         return None, []

@@ -14,6 +14,12 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser  # 新增：用于解析字符串
 # 注意：不再需要 from langchain.chains.combine_documents import create_stuff_documents_chain
 from utils import process_uploaded_files 
+
+import mysql.connector
+from mysql.connector import Error 
+import mysql.connector
+from mysql.connector import Error 
+from langchain_community.embeddings import DashScopeEmbeddings # ✅ 修复向量库错误
 # # 1. 引入你的样式模块
 # from style import apply_theme
 # # 2. 立即应用主题 (放在最前面)
@@ -29,6 +35,9 @@ cookies = EncryptedCookieManager(
 if not cookies.ready():
     st.stop()
 
+
+
+
 # --- 3. 恢复登录状态 (关键修复) ---
 # 如果 Session 里没有，但从 Cookie 读到了，就补回去
 if "logged_in" not in st.session_state:
@@ -36,12 +45,68 @@ if "logged_in" not in st.session_state:
         st.session_state["logged_in"] = True
         st.session_state["username"] = cookies.get("username")
 
+# --- 1. 数据库连接 (建议放在一个单独的 db.py 或这里) ---
+def get_db_connection():
+    # 这里复用 main.py 的逻辑，或者直接复制过来
+    try:
+        return mysql.connector.connect(
+            host=os.getenv("DB_HOST", "localhost"),
+            database=os.getenv("DB_NAME", "legal_ai_assistant"),
+            user=os.getenv("DB_USER", "root"),
+            password=os.getenv("DB_PASSWORD", ""),
+            connection_timeout=10
+        )
+    except Error as e:
+        print(f"数据库连接错误: {e}")
+        return None
+
+# --- 2. 核心修改：获取 User ID ---
+# 这是连接“登录逻辑”和“存储逻辑”的桥梁
+def get_user_id(username):
+    conn = get_db_connection()
+    if conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
+        result = cursor.fetchone()
+        conn.close()
+        return result[0] if result else None
+    return None
+
 # --- 4. 登录状态检查 (核心保护) ---
 if not st.session_state.get("logged_in"):
     st.switch_page("main.py") # 跳回登录页
 
 # 获取当前用户名
-current_user = st.session_state.get("username", "用户")
+current_username = st.session_state["username"]
+user_id = get_user_id(current_username)
+if not user_id:
+    st.error("用户身份验证失败，请重新登录")
+    st.stop()
+
+# --- 4. 初始化聊天历史：从 MySQL 加载 ---
+# 检查 session_state 中是否有历史，如果没有，去数据库捞
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+    conn = get_db_connection()
+    if conn:
+        cursor = conn.cursor()
+        # 🔑 核心：只查这个 user_id 的数据
+        cursor.execute(
+            "SELECT role, content FROM chat_logs WHERE user_id = %s ORDER BY timestamp ASC", 
+            (user_id,)
+        )
+        rows = cursor.fetchall()
+        # 将数据库记录转换为 Streamlit 可用的格式 [(question, answer), ...]
+        # 注意：这里简单按顺序配对，实际生产环境建议存对话轮次 ID
+        temp_hist = []
+        for row in rows:
+            temp_hist.append((row[1], "") if row[0] == "user" else ("", row[1]))
+        
+        # 简单的配对逻辑（实际项目建议优化存储结构）
+        for i in range(0, len(temp_hist)-1, 2):
+            if i+1 < len(temp_hist):
+                st.session_state.chat_history.append((temp_hist[i][0], temp_hist[i+1][1]))
+        conn.close()
 
 api_key = os.getenv("DASHSCOPE_API_KEY")
 #修复模型重复加载(优化性能)
@@ -58,26 +123,55 @@ def get_llm():
         temperature=0.1
     )
 
+# --- 2.1 智能初始化向量数据库：优先从硬盘恢复 (长期记忆的核心) ---
+# 这段代码替换了原来的简单初始化
 
+# 构建该用户的向量库路径 (必须和 utils.py 里的路径规则一致)
+user_vector_path = os.path.join("./vector_stores", str(user_id))
 
+# 只有当内存中没有，且硬盘上有时，才加载
+if "vector_store" not in st.session_state or st.session_state.vector_store is None:
+    if os.path.exists(user_vector_path):
+        try:
+            # 必须重新定义 Embeddings，且要和 utils.py 里的一模一样
+            embeddings = DashScopeEmbeddings(model="text-embedding-v1")
+            # 从硬盘读取
+            st.session_state.vector_store = FAISS.load_local(
+                user_vector_path, 
+                embeddings, 
+                allow_dangerous_deserialization=True
+            )
+            print(f"🔄 刷新页面：已从硬盘恢复用户 {user_id} 的向量库")
+        except Exception as e:
+            print(f"警告：无法加载用户 {user_id} 的历史向量库: {e}")
+            st.session_state.vector_store = None
+    else:
+        # 如果硬盘上没有，初始化为空
+        st.session_state.vector_store = None
+
+# --- 2.2 初始化聊天历史 (保持不变，但位置调整) ---
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+# 2. ✅ 优化点：在页面加载时就立即初始化 LLM 模型
+if "llm" not in st.session_state:
+    try:
+        st.session_state.llm = get_llm()
+        if not st.session_state.llm:
+            raise ValueError("模型初始化返回为空")
+        print("✅ 模型在页面初始化阶段已加载")
+    except Exception as e:
+        st.error("AI 模型加载失败，请检查 API Key 配置")
+        st.stop() # 直接停止，不需要继续渲染界面
  
 # --- 2. 页面配置 ---
 st.set_page_config(page_title="法律 AI 助手", page_icon="⚖️")
 # st.title("⚖ 合同问答助手")
 
-# --- 初始化 Session State (关键修复) ---
-# 1. 初始化向量数据库 (vec_store)
-if "vector_store" not in st.session_state:
-    st.session_state.vector_store = None
-# 2. 初始化聊天历史 (防止报错)
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
+
 if "user_question" in st.session_state:
     st.session_state.user_question = ""
     
 with st.sidebar:
-   
-    
     st.write(f"欢迎, {st.session_state.username}")
     # 退出按钮
     #既安全退出，又不占用服务器资源。
@@ -115,10 +209,12 @@ with st.sidebar:
             
             with st.spinner("正在解析并建立索引..."):
                 # 调用 utils.py 中的逻辑
-                vector_store, processed_files = process_uploaded_files(uploaded_files)
+                vector_store, processed_files = process_uploaded_files(uploaded_files, user_id)
                 
                 if vector_store:
                     st.session_state.vector_store = vector_store
+                     # ✅ 必须同时更新内存，否则当前轮次的 AI 问答逻辑读不到新数据
+                     # ✅ utils.py 已经通过 save_local 存到了硬盘
                     st.success(f"✅ 已加载: {', '.join(processed_files)}")
                 else:
                     st.error("文件处理失败")
@@ -139,7 +235,7 @@ st.divider()
  
     # 聊天输入框
  
-user_question = st.chat_input("请输入关于文档的问题：",key="chat_input")
+user_question = st.chat_input("请输入...",key="chat_input")
 
 # B. 处理用户问题
 if user_question:
@@ -155,10 +251,7 @@ if user_question:
             with st.spinner("AI 正在思考..."):
                 try:
                     # 1. 设置 LLM 调用模型
-                    llm = get_llm()
-                    if not llm:
-                        st.error("无法加载模型，请检查环境变量设置。")
-                        st.stop()
+                    llm = st.session_state.llm 
                                 
                     if st.session_state.vector_store:
                     # 3. 检索文档
@@ -178,7 +271,8 @@ if user_question:
 你是一个文档问答助手。请根据以下已知信息回答用户的问题。
 已知信息：
 {context}
-
+**对话历史：**
+{chat_history}
 **重要要求：**
 1. 回答必须基于已知信息，不要编造。
 2. **必须在回答中引用来源文件名**，格式为 [文件名]。
@@ -192,11 +286,27 @@ if user_question:
 """
                         prompt = ChatPromptTemplate.from_template(template)
                         rag_chain = prompt | llm | StrOutputParser()
-
+                        
+                        # 替换你原来的 format_chat_history 函数
+                        def format_chat_history(history):
+                            if not history:
+                                return "无历史对话"
+    
+                            # ✅ 优化：直接按角色拼接，结构更清晰
+                            lines = []
+                            # 只取最近的 5 轮（防止 token 超限）
+                            for q, a in history[-5:]:
+                                lines.append(f"用户: {q}")
+                                lines.append(f"AI: {a}")
+    
+                            return "\n".join(lines)
+                        formatted_history = format_chat_history(st.session_state.chat_history)
+                         
                         # 6. 调用链
                         response = rag_chain.invoke({
                             "context": context_text, 
-                            "question": user_question
+                            "question": user_question,
+                            "chat_history": formatted_history
                         })
                     else:
                          # --- 情况 B：没有文档，走通用对话流程 ---
@@ -209,12 +319,39 @@ if user_question:
                         prompt = ChatPromptTemplate.from_template(generic_template)
                         chain = prompt | llm | StrOutputParser()
                         response = chain.invoke({"question": user_question})
-                    # 显示 AI 回答
-                    st.markdown(response)
-
-                    # 将对话添加到历史记录
-                    st.session_state.chat_history.append((user_question, response))
-
+                     
+                    final_response = response
+                    st.markdown(final_response)
+                # **********************************************************
+                # ✅ 关键结合点：保存对话到 MySQL (带 user_id)
+                # **********************************************************
+                    conn = get_db_connection()
+                    if conn:
+                        cursor = conn.cursor()
+                        try:
+                            # 先存用户的问题
+                            cursor.execute(
+                            "INSERT INTO chat_logs (user_id, role, content) VALUES (%s, 'user', %s)",
+                            (user_id, user_question)
+                            )
+                            # 再存 AI 的回答
+                            cursor.execute(
+                            "INSERT INTO chat_logs (user_id, role, content) VALUES (%s, 'assistant', %s)",
+                            (user_id, final_response)
+                            )   
+                            conn.commit()
+                            # st.success("已保存到历史记录", icon="💾") # 可选：给个提示
+                        except Exception as e:
+                            print(f"保存失败: {e}")
+                            # st.warning("对话已结束，但未保存到历史记录")
+                        finally:
+                            conn.close() # 确保数据库连接关闭
+    
+                     # 6. 更新 Session State (内存同步)
+                    st.session_state.chat_history.append((user_question, final_response))
+                # ✅ 新增：捕获模型调用错误
                 except Exception as e:
-                    st.error(f"发生错误: {e}")
-
+                    error_msg = f"❌ AI 处理出错: {str(e)}"
+                    st.error(error_msg)
+                    print(f"AI 调用错误: {e}") # 打印到控制台
+# st.write("Debug - Vector Store State:", st.session_state.vector_store is not None)
