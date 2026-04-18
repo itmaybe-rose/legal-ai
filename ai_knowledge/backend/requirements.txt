@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+sqlalchemy
+pymysql
+python-dotenv
+passlib[bcrypt]
+python-jose[cryptography]
+langchain-openai
+langchain-core
+dashscope
+pydantic
+python-multipart
+requests
+beautifulsoup4
+pandas
+apscheduler
