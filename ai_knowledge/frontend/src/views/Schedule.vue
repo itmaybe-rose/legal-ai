@@ -649,11 +649,13 @@ onUnmounted(() => {
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  -webkit-overflow-scrolling: touch;
 }
 
 .time-column {
-  min-width: 70px;
+  min-width: 50px;
   border-right: 1px solid #e4e7ed;
+  flex-shrink: 0;
 }
 
 .time-header {
@@ -666,14 +668,14 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
   color: #909399;
   border-bottom: 1px solid #e4e7ed;
 }
 
 .schedule-grid {
   flex: 1;
-  min-width: 600px;
+  min-width: 300px;
 }
 
 .day-header {
@@ -683,12 +685,13 @@ onUnmounted(() => {
 
 .day-cell {
   flex: 1;
-  min-width: 100px;
+  min-width: 60px;
   height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 500;
+  font-size: 12px;
   color: #606266;
   border-right: 1px solid #e4e7ed;
 }
@@ -708,17 +711,13 @@ onUnmounted(() => {
 
 .course-cell {
   flex: 1;
-  min-width: 100px;
+  min-width: 60px;
   height: 60px;
   border-right: 1px solid #e4e7ed;
   border-bottom: 1px solid #e4e7ed;
   position: relative;
   overflow: hidden;
   cursor: pointer;
-}
-
-.course-cell:hover {
-  background: #f5f7fa;
 }
 
 .course-item {
@@ -736,18 +735,22 @@ onUnmounted(() => {
 }
 
 .course-name {
-  font-size: 11px;
+  font-size: 12px;
   color: #fff;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.3;
 }
 
 .course-info {
-  font-size: 9px;
+  font-size: 10px;
   color: rgba(255, 255, 255, 0.8);
   margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .delete-icon {
