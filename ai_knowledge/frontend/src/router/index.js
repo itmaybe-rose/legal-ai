@@ -6,6 +6,9 @@ import Forum from '../views/Forum.vue'
 import Profile from '../views/Profile.vue'
 import MainLayout from '../layouts/MainLayout.vue'
 import Planner from '../views/planner.vue'
+import Life from '../views/Life.vue'
+import Admin from '../views/Admin.vue'
+import Schedule from '../views/Schedule.vue'
 
 const routes = [
   { path: '/login', component: Login },
@@ -17,7 +20,11 @@ const routes = [
       { path: '/home', component: Home },
       { path: '/forum', component: Forum },
       { path: '/profile', component: Profile },
-      { path: '/planner', component: Planner }
+      { path: '/my-content', component: () => import('../views/MyContent.vue') },
+      { path: '/planner', component: Planner },
+      { path: '/life', component: Life },
+      { path: '/admin', component: Admin },
+      { path: '/schedule', component: Schedule }
     ]
   }
 ]

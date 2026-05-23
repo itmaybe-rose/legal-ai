@@ -7,6 +7,7 @@ import json
 from typing import List, Dict, Any
 from datetime import datetime
 from dotenv import load_dotenv
+from utils.logger import logger
 
 load_dotenv()
 
@@ -38,22 +39,22 @@ try:
             with engine.connect() as conn:
                 pass
             USE_MYSQL = True
-            print(f"[数据库] MySQL连接成功: {DB_HOST}:{DB_PORT}/{DB_NAME}")
+            logger.info(f"MySQL连接成功: {DB_HOST}:{DB_PORT}/{DB_NAME}")
         except Exception as e:
-            print(f"[数据库] MySQL连接失败，将使用SQLite: {e}")
+            logger.warning(f"MySQL连接失败，将使用SQLite: {e}")
             engine = None
     else:
-        print("[数据库] 未配置MySQL密码，将使用SQLite")
+        logger.info("未配置MySQL密码，将使用SQLite")
 
 except ImportError as e:
-    print(f"[数据库] SQLAlchemy未安装: {e}")
+    logger.warning(f"SQLAlchemy未安装: {e}")
 
 # 如果没有MySQL，使用SQLite
 if not USE_MYSQL:
     db_path = os.path.join(os.path.dirname(__file__), "data", "courses.db")
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     engine = create_engine(f"sqlite:///{db_path}", echo=False)
-    print(f"[数据库] 使用SQLite: {db_path}")
+    logger.info(f"使用SQLite: {db_path}")
 
 # 创建基类
 Base = declarative_base()
@@ -185,7 +186,7 @@ class CourseDatabase:
                 self.session.add(job_obj)
                 count += 1
             except Exception as e:
-                print(f"插入职位失败: {e}")
+                logger.error(f"插入职位失败: {e}")
 
         self.session.commit()
         return count
@@ -213,7 +214,7 @@ class CourseDatabase:
                 self.session.add(exam_obj)
                 count += 1
             except Exception as e:
-                print(f"插入考研数据失败: {e}")
+                logger.error(f"插入考研数据失败: {e}")
 
         self.session.commit()
         return count
@@ -235,7 +236,7 @@ class CourseDatabase:
                 self.session.add(civil_obj)
                 count += 1
             except Exception as e:
-                print(f"插入考公数据失败: {e}")
+                logger.error(f"插入考公数据失败: {e}")
 
         self.session.commit()
         return count
@@ -259,7 +260,7 @@ class CourseDatabase:
                 self.session.add(course_obj)
                 count += 1
             except Exception as e:
-                print(f"插入课程失败: {e}")
+                logger.error(f"插入课程失败: {e}")
 
         self.session.commit()
         return count
@@ -391,7 +392,7 @@ class CourseDatabase:
                 memory_cache[cache_key] = plan_data
                 return plan_data
         except Exception as e:
-            print(f"从数据库获取模板失败: {e}")
+            logger.error(f"从数据库获取模板失败: {e}")
         
         return None
 
@@ -424,9 +425,9 @@ class CourseDatabase:
             cache_key = f"plan:{major}:{goal}"
             memory_cache[cache_key] = graph_json
             
-            print(f"保存模板成功: {major} - {goal}")
+            logger.info(f"保存模板成功: {major} - {goal}")
         except Exception as e:
-            print(f"保存模板失败: {e}")
+            logger.error(f"保存模板失败: {e}")
 
 # 全局数据库实例
 course_db = None
@@ -463,7 +464,7 @@ if __name__ == "__main__":
 
     # 测试搜索
     results = db.search_jobs("Java")
-    print(f"搜索到 {len(results)} 条结果")
+    logger.info(f"搜索到 {len(results)} 条结果")
 
     # 测试模板保存和读取
     test_template = {
@@ -474,4 +475,4 @@ if __name__ == "__main__":
     }
     db.save_plan_template("计算机科学", "就业", test_template)
     loaded_template = db.get_plan_template("计算机科学", "就业")
-    print(f"加载模板成功: {loaded_template}")
+    logger.info(f"加载模板成功: {loaded_template['_key']}")

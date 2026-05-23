@@ -1,5 +1,6 @@
 <template>
-  <div class="profile-container">
+  <div class="profile-container" :style="containerStyle">
+    <!-- 背景层已移到 MainLayout 中 -->
     <!-- 状态 1：未进入设置页，显示概览 -->
     <div v-if="!isEditing">
       <el-card class="user-card" shadow="hover">
@@ -11,9 +12,14 @@
           <div class="details">
             <h3>{{ userInfo.name || '未登录/未完善' }}</h3>
             <p>{{ userInfo.major || '点击设置完善档案' }}</p>
+            <p class="role-info">
+              角色：{{ userInfo.role === 1 ? '管理员' : '学生' }}
+            </p>
           </div>
         </div>
       </el-card>
+
+
 
       <!-- 设置入口 -->
       <el-menu class="setting-menu">
@@ -21,9 +27,13 @@
           <el-icon><Setting /></el-icon>
           <span>个人设置 / 信息录入</span>
         </el-menu-item>
-        <el-menu-item index="2">
+        <el-menu-item index="2" @click="goToSchedule">
           <el-icon><Document /></el-icon>
           <span>我的课程表</span>
+        </el-menu-item>
+        <el-menu-item index="3" @click="showBackgroundDialog = true">
+          <el-icon><Setting /></el-icon>
+          <span>背景设置</span>
         </el-menu-item>
       </el-menu>
     </div>
@@ -50,6 +60,7 @@
                 :show-file-list="false"
                 :auto-upload="false"
                 :on-change="handleFileChange"
+                accept="image/*"
               >
                 <img v-if="userInfo.avatar" :src="userInfo.avatar" class="avatar-preview" />
                 <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
@@ -84,8 +95,7 @@
             <el-button type="primary" @click="saveInfo">保存信息</el-button>
           </el-form-item>
         </el-form>
-      </el-card>
-  </div>
+        </el-card>
 
       <!-- 退出登录按钮：放在表单下方，醒目且安全 -->
       <div class="logout-area">
@@ -95,15 +105,60 @@
       </div>
 
     </div>
-    
+
+    <!-- 背景设置对话框 -->
+    <el-dialog
+      v-model="showBackgroundDialog"
+      title="背景设置"
+      :width="dialogWidth"
+    >
+      <el-form>
+        <el-form-item label="背景图片">
+          <el-upload
+            class="upload-demo"
+            action="#"
+            :auto-upload="false"
+            :on-change="handleImageChange"
+            accept="image/*"
+          >
+            <el-button type="primary">选择图片</el-button>
+            <template #tip>
+              <div class="el-upload__tip">
+                请选择背景图片（支持jpg、png、gif格式）
+              </div>
+            </template>
+          </el-upload>
+          <div v-if="backgroundImage" class="preview-image">
+            <img :src="backgroundImage" alt="背景预览" />
+            <el-button type="danger" link @click="removeBackground">移除图片</el-button>
+          </div>
+        </el-form-item>
+        <el-form-item label="字体颜色">
+          <el-color-picker v-model="fontColor" show-alpha />
+        </el-form-item>
+        <el-form-item label="背景透明度">
+          <el-slider v-model="opacity" :min="0" :max="1" :step="0.1" show-input />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showBackgroundDialog = false">取消</el-button>
+          <el-button type="primary" @click="saveBackgroundSettings">保存</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+
+  </div>
 </template>
  
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Setting, Document, UserFilled, ArrowLeft,Camera,Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { Setting, Document, UserFilled, ArrowLeft, Camera, Plus, Edit, Delete } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from '../utils/axios'
+import { useBackground } from '../composables/useBackground'
 
 
 
@@ -117,10 +172,36 @@ const userInfo = reactive({
   name: '',
   major: '',
   grade: '大一',
-  avatar: ''
+  avatar: '',
+  role: 0
 })
 // 👇 在这里添加：用来存从后端获取的专业列表
 const majorOptions = ref([])
+
+
+
+// --- 背景设置功能 ---
+const showBackgroundDialog = ref(false)
+const { backgroundImage, fontColor, opacity, saveSettings, handleImageChange, removeBackground, containerStyle } = useBackground()
+
+// 计算对话框宽度，适配移动端
+const dialogWidth = computed(() => {
+  const screenWidth = window.innerWidth
+  if (screenWidth < 768) {
+    return '90%'
+  } else if (screenWidth < 1024) {
+    return '70%'
+  } else {
+    return '500px'
+  }
+})
+
+// 重写saveSettings以关闭对话框
+const saveBackgroundSettings = () => {
+  saveSettings()
+  showBackgroundDialog.value = false
+  ElMessage.success('背景设置保存成功！')
+}
 
 // 页面加载时，尝试从 localStorage 恢复数据
 const loadUserInfo = () => {
@@ -167,6 +248,8 @@ onMounted(async () => {
       { name: '软件工程' }
     ]
   }
+  
+
 })
 
 // 定义 saveToLocal 函数
@@ -176,14 +259,20 @@ const saveToLocal = () => {
 
 // 4. 处理表单内图片变化（编辑页）
 const handleFileChange = (file) => {
+  console.log('File change event:', file)
   // 保存选中的文件
-  selectedFile.value = file.raw
-  // 使用 FileReader 进行本地预览
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    userInfo.avatar = e.target.result // 将图片转为 Base64 并赋值
+  if (file.raw) {
+    selectedFile.value = file.raw
+    // 使用 FileReader 进行本地预览
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      userInfo.avatar = e.target.result // 将图片转为 Base64 并赋值
+      console.log('Avatar updated:', userInfo.avatar)
+    }
+    reader.readAsDataURL(file.raw)
+  } else {
+    console.error('No file raw found:', file)
   }
-  reader.readAsDataURL(file.raw)
 }
 
 // 6. 页面加载时，从后端获取最新用户信息
@@ -209,14 +298,21 @@ const fetchUserInfo = async () => {
       userInfo.name = response.data.name || ''
       userInfo.major = response.data.major || ''
       userInfo.grade = response.data.grade || '大一'
-      userInfo.avatar = response.data.avatar || ''
-      console.log('Updated userInfo:', userInfo)
-      // 保存到本地存储
-      // 添加完整的后端域名
-      userInfo.avatar = response.data.avatar ? response.data.avatar : ''
+      // 只有当后端明确返回了avatar时才更新，否则保持本地存储的头像URL
+      if (response.data.avatar) {
+        userInfo.avatar = response.data.avatar
+        console.log('Updated avatar from backend:', userInfo.avatar)
+      } else {
+        console.log('No avatar from backend, keeping existing avatar:', userInfo.avatar)
+      }
+      
+      // 获取用户角色信息
+      userInfo.role = response.data.role || 0
+      
       console.log('Updated userInfo:', userInfo)
       // 保存到本地存储
       localStorage.setItem('userProfile', JSON.stringify(userInfo))
+      localStorage.setItem('userInfo', JSON.stringify(userInfo))
       console.log('Saved to localStorage')
     }
   } catch (error) {
@@ -241,9 +337,11 @@ const saveInfo = async () => {
     formData.append('grade', userInfo.grade)
     
     // 如果有选中的文件，添加到formData
+    let isAvatarChanged = false
     if (selectedFile.value) {
       console.log('Selected file:', selectedFile.value)
       formData.append('avatar_file', selectedFile.value)
+      isAvatarChanged = true
     }
     
     // 2. 发送 POST 请求
@@ -254,7 +352,7 @@ const saveInfo = async () => {
       {
         headers: {
           'Authorization': `Bearer ` + token, // 👈 带上 Token，后端才知道是谁在保存
-          'Content-Type': 'multipart/form-data'
+          // 'Content-Type': 'multipart/form-data'
         }
       }
     )
@@ -263,11 +361,9 @@ const saveInfo = async () => {
     // 3. 后端返回成功
     if (response.data) {
       // 更新头像URL
-      if (response.data.avatar_url) {
-        console.log('Updating avatar URL:', response.data.avatar_url)
-        userInfo.avatar = response.data.avatar_url
-         // 添加完整的后端域名
-        userInfo.avatar = response.data.avatar_url
+      if (response.data.avatar) {
+        console.log('Updating avatar URL:', response.data.avatar)
+        userInfo.avatar = response.data.avatar
       }
       // 保存到本地
       localStorage.setItem('userProfile', JSON.stringify(userInfo))
@@ -282,6 +378,11 @@ const saveInfo = async () => {
   }
 }
 
+// --- 新增：跳转到课程表 ---
+const goToSchedule = () => {
+  router.push('/schedule')
+}
+
 // --- 新增：退出登录逻辑 ---
 const handleLogout = () => {
   // 1. 清除 Token
@@ -292,14 +393,18 @@ const handleLogout = () => {
   router.push('/login')
 }
 
+
+
+
+
 // 组件挂载后执行：读取数据
-onMounted(async () => {
-  loadUserInfo()
-  // 从后端获取最新用户信息
-  await fetchUserInfo()
-  // 确保头像URL正确
-  console.log('Current avatar URL:', userInfo.avatar)
-})
+// onMounted(async () => {
+//   loadUserInfo()
+//   // 从后端获取最新用户信息
+//   await fetchUserInfo()
+//   // 确保头像URL正确
+//   console.log('Current avatar URL:', userInfo.avatar)
+// })
 </script>
 
 <style scoped>
@@ -310,6 +415,8 @@ onMounted(async () => {
 .user-info { display: flex; align-items: center; gap: 20px; }
 .details h3 { margin: 0 0 8px 0; font-size: 20px; }
 .details p { margin: 0; color: #909399; }
+.role-info { margin-top: 5px; font-size: 14px; }
+.role-info span { font-weight: 500; }
 .setting-menu { border-radius: 8px; overflow: hidden; }
 
 /* 编辑页样式 */
@@ -364,5 +471,37 @@ onMounted(async () => {
   height: 100px;
   line-height: 100px;
   text-align: center;
+}
+
+/* 背景预览样式 */
+.preview-image {
+  margin-top: 10px;
+  text-align: center;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+}
+
+.preview-image img {
+  max-width: 90%;
+  max-height: 150px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 调整卡片背景透明度 */
+.user-card,
+.form-card {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 10px;
+}
+
+.setting-menu {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 20px;
 }
 </style>

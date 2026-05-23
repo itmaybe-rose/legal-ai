@@ -94,8 +94,8 @@ const submitForm = () => {
       try {
         // 根据模式选择不同的接口
         const url = isLogin.value 
-          ? '/login' 
-          : '/register'
+          ? '/api/users/login' 
+          : '/api/users/register'
 
          // --- 核心修改点：使用 URLSearchParams 适配 FastAPI 的 Form ---
         const formData = new URLSearchParams()
@@ -107,15 +107,15 @@ const submitForm = () => {
         if (isLogin.value) {
             // 1. 获取 Token
           const token = res.data.access_token
+          const refreshToken = res.data.refresh_token
           
           if (token) {
             // 2. 存储 Token
             localStorage.setItem('token', token)
+            if (refreshToken) {
+              localStorage.setItem('refresh_token', refreshToken)
+            }
             
-            // 3. 解析 Token 获取用户名 (因为后端把用户名放在了 sub 字段里)
-            const decoded = jwtDecode(token)
-            const username = decoded.sub 
-
             // 2. 【新增】立即从数据库拉取用户信息
           // 注意：这里必须等 Token 存进去后再调用，因为拉取接口需要验证 Token
           try {
@@ -128,6 +128,11 @@ const submitForm = () => {
             // 3. 将拉取到的数据存入 LocalStorage
             // 这样 Profile 页面加载时就能读到了
             localStorage.setItem('userProfile', JSON.stringify(infoRes.data))
+            // 存储用户名到 localStorage
+            localStorage.setItem('username', infoRes.data.username)
+            
+            // 4. 存储用户角色信息
+            localStorage.setItem('userInfo', JSON.stringify({ role: infoRes.data.role }))
             
             ElMessage.success('登录成功！')
             router.push('/profile') // 跳转到个人中心
@@ -136,6 +141,9 @@ const submitForm = () => {
             console.error("自动拉取用户信息失败", infoError)
             // 即使拉取失败，也允许登录，只是个人信息可能是空的
             ElMessage.warning('登录成功，但获取个人信息失败，请稍后在个人中心完善')
+            // 存储用户名和默认角色
+            localStorage.setItem('username', form.username)
+            localStorage.setItem('userInfo', JSON.stringify({ role: 0 }))
             router.push('/profile')
           }
           }
@@ -146,7 +154,8 @@ const submitForm = () => {
           toggleMode() // 自动切换到登录模式
         }
       } catch (error) {
-        ElMessage.error(error.response?.data?.detail || '操作失败')
+        // 错误已由 axios 拦截器统一显示
+        console.error('登录/注册失败:', error)
       } finally {
         loading.value = false
       }
@@ -173,6 +182,7 @@ const submitForm = () => {
   border-radius: 15px;
   border: none;
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .title {

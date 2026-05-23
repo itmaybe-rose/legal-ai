@@ -1,66 +1,95 @@
 <template>
-  <el-container class="layout-container" direction="vertical">
-    <!-- 1. 顶部 Header -->
-    <el-header class="app-header">
-      <div class="header-content">
-        <h2>智汇校园</h2>
-      </div>
-    </el-header>
+  <div class="global-container">
+    <div class="background-layer" :style="backgroundLayerStyle"></div>
+    <el-container class="layout-container" direction="vertical">
+      <!-- 1. 顶部 Header -->
+      <el-header class="app-header">
+        <div class="header-content">
+          <h2>智汇校园</h2>
+        </div>
+      </el-header>
 
-    <!-- 2. 中间主要内容区 -->
-    <el-main class="app-main view-wrapper">
-      <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <component :is="Component" />
-        </transition>
-      </router-view>
-    </el-main>
+      <!-- 2. 中间主要内容区 -->
+      <el-main class="app-main view-wrapper">
+        <router-view v-slot="{ Component }">
+          <transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
+      </el-main>
 
-    <!-- 3. 底部导航栏 -->
-    <!-- 底部导航栏 (替换原来的退出按钮区域) -->
-    <nav class="bottom-nav">
-      <!-- 滑块：通过 :style 动态控制位置和宽度 -->
-      <div
-        class="slider"
-        :style="{
-          transform: `translateX(${activeIndex * 100}%)`,
-          width: `${100 / navItems.length}%`
-        }"
-      ></div>
+      <!-- 3. 底部导航栏 -->
+      <!-- 底部导航栏 (替换原来的退出按钮区域) -->
+      <nav class="bottom-nav">
+        <!-- 滑块：通过 :style 动态控制位置和宽度 -->
+        <div
+          class="slider"
+          :style="{
+            transform: `translateX(${activeIndex * 100}%)`,
+            width: `${100 / navItems.length}%`
+          }"
+        ></div>
 
-      <!-- 导航项 -->
-      <button
-        v-for="(item, index) in navItems"
-        :key="item.name"
-        class="nav-item"
-        :class="{ active: activeIndex === index }"
-        @click="handleNav(index, item.path)"
-      >
-        <!-- 图标 -->
-        <el-icon :size="24" class="nav-icon">
-          <component :is="item.icon" />
-        </el-icon>
-        <!-- 文字 -->
-        <span class="nav-text">{{ item.name }}</span>
-      </button>
-    </nav>
-  </el-container>
+        <!-- 导航项 -->
+        <button
+          v-for="(item, index) in navItems"
+          :key="item.name"
+          class="nav-item"
+          :class="{ active: activeIndex === index }"
+          @click="handleNav(index, item.path)"
+        >
+          <!-- 图标 -->
+          <el-icon :size="24" class="nav-icon">
+            <component :is="item.icon" />
+          </el-icon>
+          <!-- 文字 -->
+          <span class="nav-text">{{ item.name }}</span>
+        </button>
+      </nav>
+    </el-container>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Location, User, Menu } from '@element-plus/icons-vue'
+import { Location, User, Menu, Setting } from '@element-plus/icons-vue'
+import { useBackground } from '../composables/useBackground'
+
+const { backgroundLayerStyle } = useBackground()
 
 const router = useRouter()
 const route = useRoute()
 
+// 获取用户角色
+const getUserRole = () => {
+  try {
+    const userInfo = localStorage.getItem('userInfo')
+    if (userInfo) {
+      const info = JSON.parse(userInfo)
+      return info.role || 0
+    }
+    return 0
+  } catch (error) {
+    return 0
+  }
+}
+
 // 新增：底部导航栏数据
-const navItems = [
-  { name: '主页', icon: Menu, path: '/home' },
-  { name: '论坛', icon: Location, path: '/forum' }, // 对应你图片中间的图标
-  { name: '我的', icon: User, path: '/profile' },
-]
+const navItems = computed(() => {
+  const baseItems = [
+    { name: '主页', icon: Menu, path: '/home' },
+    { name: '论坛', icon: Location, path: '/forum' }, // 对应你图片中间的图标
+    { name: '我的', icon: User, path: '/profile' },
+  ]
+  
+  // 如果是管理员，添加管理入口
+  if (getUserRole() === 1) {
+    baseItems.push({ name: '管理', icon: Setting, path: '/admin' })
+  }
+  
+  return baseItems
+})
 
 // 当前激活的索引
 const activeIndex = ref(0)
@@ -68,7 +97,7 @@ const activeIndex = ref(0)
 // 根据当前路由设置activeIndex
 const setActiveIndexByRoute = () => {
   const currentPath = route.path
-  const index = navItems.findIndex(item => item.path === currentPath)
+  const index = navItems.value.findIndex(item => item.path === currentPath)
   if (index !== -1) {
     activeIndex.value = index
   }
@@ -92,10 +121,17 @@ watch(() => route.path, () => {
 </script>
 
 <style scoped>
+/* 全局容器 */
+.global-container {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
 /* 样式保持不变 */
-.layout-container {    /* 关键修复：确保高度占满屏幕，且背景色统一 */
+.layout-container {    /* 关键修复：确保高度占满屏幕 */
   height: 100vh;
-  background-color: #f5f7fa;
   /* 移除之前的 padding，交给内部组件处理 */
   padding: 0;
   overflow: hidden; }
