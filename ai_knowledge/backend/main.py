@@ -50,14 +50,14 @@ from api.plan import router as plan_router
 from api.forum import router as forum_router
 from api.life import router as life_router
 from api.admin import router as admin_router
-
+from api.push import router as push_router
 app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(plan_router)
 app.include_router(forum_router)
 app.include_router(life_router)
 app.include_router(admin_router)
-
+app.include_router(push_router, prefix="/api/push", tags=["推送通知"])
 
 # --- 自定义中文速率限制提示 ---
 @app.exception_handler(RateLimitExceeded)
