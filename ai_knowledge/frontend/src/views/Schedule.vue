@@ -101,17 +101,7 @@
     <div class="schedule-content">
       <div class="time-column">
         <div class="time-header"></div>
-        <div class="time-cell">08:30</div>
-        <div class="time-cell">10:00</div>
-        <div class="time-cell">10:20</div>
-        <div class="time-cell">11:50</div>
-        <div class="time-cell">14:00</div>
-        <div class="time-cell">15:30</div>
-        <div class="time-cell">15:50</div>
-        <div class="time-cell">17:20</div>
-        <div class="time-cell">18:40</div>
-        <div class="time-cell">20:10</div>
-        <div class="time-cell">21:30</div>
+        <div class="time-cell" v-for="(time, index) in timeLabels" :key="index">{{ time }}</div>
       </div>
 
       <div class="schedule-grid">
@@ -178,8 +168,8 @@
             <el-option label="Period 1-2 (08:30-10:00)" :value="'1-2'" />
             <el-option label="Period 3-4 (10:00-11:50)" :value="'3-4'" />
             <el-option label="Period 5-6 (14:00-15:30)" :value="'5-6'" />
-            <el-option label="Period 7-8 (16:00-17:20)" :value="'7-8'" />
-            <el-option label="Period 9-10 (18:40-20:10)" :value="'9-10'" />
+            <el-option label="Period 7-8 (15:50-17:20)" :value="'7-8'" />
+            <el-option label="Period 9-11(18:40-20:10)" :value="'9-11'" />
           </el-select>
         </el-form-item>
         <el-form-item label="Classroom">
@@ -216,13 +206,70 @@
         </div>
       </div>
     </el-dialog>
+
+    <el-dialog v-model="showReviewDialog" title="🔍 Recognition Review" :width="dialogWidth">
+      <div v-if="recognitionResult" class="review-content">
+        <div class="review-summary">
+          <el-tag type="success" size="large">✅ Auto-accepted: {{ recognitionResult.autoAccepted }}</el-tag>
+          <el-tag type="warning" size="large">⚠️ Needs Review: {{ recognitionResult.needsReview }}</el-tag>
+          <el-tag type="danger" size="large">❌ Needs Fix: {{ recognitionResult.needsFix }}</el-tag>
+        </div>
+
+        <div v-if="recognitionResult.lowConfidence.length > 0" class="low-confidence-section">
+          <h4>⚠️ Low Confidence Courses</h4>
+          <div class="course-review-list">
+            <div 
+              v-for="(course, index) in recognitionResult.lowConfidence" 
+              :key="index"
+              class="course-review-item"
+              :class="{
+                'status-confirmed': course.confidence >= 0.8,
+                'status-review': course.confidence >= 0.6 && course.confidence < 0.8,
+                'status-fix': course.confidence < 0.6
+              }"
+            >
+              <div class="course-review-header">
+                <span class="course-name">{{ course.name }}</span>
+                <el-tag 
+                  :type="course.confidence >= 0.8 ? 'success' : course.confidence >= 0.6 ? 'warning' : 'danger'"
+                  size="small"
+                >
+                  {{ (course.confidence * 100).toFixed(0) }}%
+                </el-tag>
+              </div>
+              <div v-if="course.warnings && course.warnings.length > 0" class="course-warnings">
+                <el-icon><Warning /></el-icon>
+                <span v-for="(warning, i) in course.warnings" :key="i">{{ warning }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="recognitionResult.violations.length > 0" class="violations-section">
+          <h4>🚨 Conflicts Detected</h4>
+          <div class="violation-list">
+            <div 
+              v-for="(violation, index) in recognitionResult.violations" 
+              :key="index"
+              class="violation-item"
+            >
+              <el-icon><WarningFilled /></el-icon>
+              <span>{{ violation.course }} conflicts with {{ violation.conflict_with }} at the same time ({{ getDayText(violation.day_of_week) }} {{ violation.period }})</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button type="primary" @click="showReviewDialog = false">I Understand</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Camera, Plus, Delete, Calendar, Opportunity, Setting, ArrowLeft } from '@element-plus/icons-vue'
+import { Camera, Plus, Delete, Calendar, Opportunity, Setting, ArrowLeft, Warning, WarningFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { scheduleApi } from '../services/api'
 import { useNotification, startCourseReminder, stopCourseReminder } from '../composables/useNotification'
@@ -261,6 +308,27 @@ const dialogWidth = computed(() => {
   return '400px'
 })
 
+const PERIOD_TIME_MAP = {
+  '1-2节': ['08:30', '10:00'],
+  '3-4节': ['10:20', '11:50'],
+  '5-6节': ['14:00', '15:30'],
+  '7-8节': ['15:50', '17:20'],
+  '9-11节': ['18:40', '20:10']
+}
+
+const timeLabels = computed(() => {
+  const labels = []
+  const periodOrder = ['1-2节', '3-4节', '5-6节', '7-8节', '9-11节']
+  periodOrder.forEach(key => {
+    const times = PERIOD_TIME_MAP[key]
+    if (times) {
+      labels.push(times[0])
+      labels.push(times[1])
+    }
+  })
+  return labels
+})
+
 const getCourseAt = (day, period) => {
   const periodMap = {
     1: ['1', '1节', '1-2', '1-2节'],
@@ -286,6 +354,9 @@ const getDayText = (day) => {
   return days[day] || ''
 }
 
+const recognitionResult = ref(null)
+const showReviewDialog = ref(false)
+
 const handleScheduleUpload = async (file) => {
   selectedFile.value = file.raw
   isUploading.value = true
@@ -295,8 +366,31 @@ const handleScheduleUpload = async (file) => {
 
     const response = await scheduleApi.uploadSchedule(selectedFile.value)
 
-    const count = response.data?.courses_count || 0
-    ElMessage.success(`🎉 AI recognized ${count} courses! Schedule uploaded successfully!`)
+    const data = response.data || {}
+    const count = data.courses_count || 0
+    const status = data.status || 'success'
+    const autoAccepted = data.auto_accepted || 0
+    const needsReview = data.needs_review || 0
+    const needsFix = data.needs_fix || 0
+    const violations = data.violations || []
+    const lowConfidence = data.low_confidence || []
+
+    if (status === 'needs_review' && (needsReview > 0 || needsFix > 0)) {
+      recognitionResult.value = {
+        total: count,
+        autoAccepted,
+        needsReview,
+        needsFix,
+        violations,
+        lowConfidence
+      }
+      showReviewDialog.value = true
+    } else if (status === 'error') {
+      ElMessage.error(data.error || 'Recognition failed')
+    } else {
+      ElMessage.success(`🎉 AI recognized ${count} courses! All auto-accepted!`)
+    }
+
     await loadSchedule()
   } catch (error) {
     console.error('Upload failed', error)
@@ -649,13 +743,11 @@ onUnmounted(() => {
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  -webkit-overflow-scrolling: touch;
 }
 
 .time-column {
-  min-width: 50px;
+  min-width: 70px;
   border-right: 1px solid #e4e7ed;
-  flex-shrink: 0;
 }
 
 .time-header {
@@ -668,14 +760,14 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 12px;
   color: #909399;
   border-bottom: 1px solid #e4e7ed;
 }
 
 .schedule-grid {
   flex: 1;
-  min-width: 300px;
+  min-width: 600px;
 }
 
 .day-header {
@@ -685,13 +777,12 @@ onUnmounted(() => {
 
 .day-cell {
   flex: 1;
-  min-width: 60px;
+  min-width: 100px;
   height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 500;
-  font-size: 12px;
   color: #606266;
   border-right: 1px solid #e4e7ed;
 }
@@ -711,13 +802,17 @@ onUnmounted(() => {
 
 .course-cell {
   flex: 1;
-  min-width: 60px;
+  min-width: 100px;
   height: 60px;
   border-right: 1px solid #e4e7ed;
   border-bottom: 1px solid #e4e7ed;
   position: relative;
   overflow: hidden;
   cursor: pointer;
+}
+
+.course-cell:hover {
+  background: #f5f7fa;
 }
 
 .course-item {
@@ -735,22 +830,18 @@ onUnmounted(() => {
 }
 
 .course-name {
-  font-size: 12px;
+  font-size: 11px;
   color: #fff;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 1.3;
 }
 
 .course-info {
-  font-size: 10px;
+  font-size: 9px;
   color: rgba(255, 255, 255, 0.8);
   margin-top: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .delete-icon {
@@ -802,8 +893,108 @@ onUnmounted(() => {
 }
 
 .detail-row .label {
+  font-weight: 500;
+  color: #606266;
+}
+
+.review-content {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.review-summary {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+
+.low-confidence-section,
+.violations-section {
+  margin-bottom: 20px;
+}
+
+.low-confidence-section h4,
+.violations-section h4 {
+  margin: 0 0 12px 0;
+  color: #303133;
+  font-size: 14px;
+}
+
+.course-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.course-review-item {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
+  background: #fff;
+}
+
+.course-review-item.status-confirmed {
+  border-left: 4px solid #67c23a;
+  background: #f0f9eb;
+}
+
+.course-review-item.status-review {
+  border-left: 4px solid #e6a23c;
+  background: #fdf6ec;
+}
+
+.course-review-item.status-fix {
+  border-left: 4px solid #f56c6c;
+  background: #fef0f0;
+}
+
+.course-review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.course-review-header .course-name {
+  font-weight: 500;
+  color: #303133;
+}
+
+.course-warnings {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
   color: #909399;
-  margin-right: 8px;
+}
+
+.course-warnings .el-icon {
+  color: #e6a23c;
+}
+
+.violation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.violation-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fef0f0;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #f56c6c;
+}
+
+.violation-item .el-icon {
+  font-size: 16px;
 }
 
 @media (max-width: 768px) {
@@ -812,9 +1003,13 @@ onUnmounted(() => {
     margin: 5px;
   }
 
-  .schedule-header {
-    flex-direction: column;
-    align-items: flex-start;
+  .schedule-header h2 {
+    font-size: 16px;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .reminder-bar {
@@ -823,16 +1018,13 @@ onUnmounted(() => {
   }
 
   .reminder-right {
+    width: 100%;
+    justify-content: space-between;
     margin-top: 10px;
   }
 
-  .test-mode-content {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
   .schedule-content {
-    font-size: 12px;
+    min-width: 300px;
   }
 
   .time-column {
@@ -840,23 +1032,24 @@ onUnmounted(() => {
   }
 
   .time-cell {
-    height: 50px;
     font-size: 10px;
   }
 
+  .schedule-grid {
+    min-width: 300px;
+  }
+
   .day-cell {
-    min-width: 70px;
-    height: 35px;
-    font-size: 11px;
+    min-width: 60px;
+    font-size: 12px;
   }
 
   .course-cell {
-    min-width: 70px;
-    height: 50px;
+    min-width: 60px;
   }
 
   .course-name {
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .course-info {

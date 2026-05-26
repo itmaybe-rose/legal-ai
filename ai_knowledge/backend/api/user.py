@@ -287,8 +287,12 @@ def upload_schedule(
     import os
     full_image_path = os.path.join("static/uploads", os.path.basename(url))
 
-    courses_data = recognize_schedule_image(full_image_path)
+    result = recognize_schedule_image(full_image_path)
 
+    if result["status"] == "error":
+        return error(message=f"课程表识别失败: {result.get('error', '未知错误')}")
+
+    courses_data = result.get("courses", [])
     colors = ["#409eff", "#67c23a", "#f56c6c", "#909399", "#e6a23c", "#f78900", "#7232dd", "#3ba272"]
 
     for i, course_data in enumerate(courses_data):
@@ -313,7 +317,16 @@ def upload_schedule(
     return success(message="课程表上传成功", data={
         "schedule_id": schedule.id,
         "image_url": url,
-        "courses_count": len(courses_data)
+        "status": result["status"],
+        "courses_count": len(courses_data),
+        "auto_accepted": result.get("summary", {}).get("auto_accepted", 0),
+        "needs_review": result.get("summary", {}).get("needs_review", 0),
+        "needs_fix": result.get("summary", {}).get("needs_fix", 0),
+        "violations": result.get("violations", []),
+        "low_confidence": [
+            {"name": c.get("name", ""), "confidence": c.get("confidence", 0), "warnings": c.get("warnings", [])}
+            for c in result.get("low_confidence", [])
+        ]
     })
 
 

@@ -102,6 +102,34 @@ class VectorDatabase:
             import shutil
             shutil.rmtree(PERSIST_DIR)
         logger.info("已清空")
+    
+    def remove_by_keyword(self, keyword: str) -> int:
+        """根据关键词删除文档"""
+        if not self.documents:
+            return 0
+        
+        # 找出包含关键词的文档索引
+        to_remove = [i for i, doc in enumerate(self.documents) if keyword in doc]
+        
+        if not to_remove:
+            logger.info(f"未找到包含关键词 '{keyword}' 的文档")
+            return 0
+        
+        # 保留不包含关键词的文档
+        new_docs = [doc for i, doc in enumerate(self.documents) if i not in to_remove]
+        removed_count = len(self.documents) - len(new_docs)
+        
+        # 重新创建索引
+        if new_docs:
+            self.db = FAISS.from_texts(new_docs, embeddings)
+            self.documents = new_docs
+        else:
+            self.db = None
+            self.documents = []
+        
+        self._save_to_disk()
+        logger.info(f"已删除 {removed_count} 个包含关键词 '{keyword}' 的文档")
+        return removed_count
 
 # --- 全局实例与工厂函数 ---
 def get_vector_db():

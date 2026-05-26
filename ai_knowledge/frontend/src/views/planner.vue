@@ -270,6 +270,7 @@ const generateKnowledgeTree = async () => {
     
     graphNodes.value = nodes
     graphEdges.value = edges
+    console.log('planner: 已设置 graphNodes, 数量:', graphNodes.value.length)
 
     if (selectedPlan.value === 'job' && response.data.job_market) {
       jobMarketData.value = response.data.job_market

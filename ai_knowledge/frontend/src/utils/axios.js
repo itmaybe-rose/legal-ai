@@ -41,14 +41,19 @@ service.interceptors.request.use(
 // 响应拦截器
 service.interceptors.response.use(
   response => {
+    console.log('axios 原始响应:', response)
     const res = response.data
+    console.log('响应数据:', res)
     // 统一响应格式: { code: 0, message: "success", data: ... }
     if (res.code !== undefined && res.code !== 0) {
       ElMessage.error(res.message || '请求失败')
       return Promise.reject(new Error(res.message))
     }
     // 解包，使 response.data 直接指向实际数据
-    response.data = res.data
+    if (res.data !== undefined) {
+      response.data = res.data
+    }
+    console.log('最终 response.data:', response.data)
     return response
   },
   async error => {

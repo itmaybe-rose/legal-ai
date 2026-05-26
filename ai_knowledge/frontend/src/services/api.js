@@ -5,7 +5,7 @@ export const planApi = {
   generatePlan: (major, goal, job = null) => {
     const formData = new FormData()
     formData.append('major', major)
-    formData.append('goal', job)
+    formData.append('goal', goal)
     if (job) formData.append('job', job)
     return axios.post('/api/generate_plan', formData)
   },

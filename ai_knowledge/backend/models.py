@@ -96,52 +96,7 @@ class UserSettings(Base):
     # --- 👇 新增的关系定义 ---
     user = relationship("User", back_populates="settings")
 
-# --- 👇 新增的代码：旅游相关表 ---
-class City(Base):
-    __tablename__ = "cities"
-    id = Column(String(50), primary_key=True, index=True)
-    name = Column(String(50), nullable=False)
-    lat = Column(Float, nullable=False)
-    lng = Column(Float, nullable=False)
-    color = Column(String(20), default="#409eff")
-    transport = Column(String(100), default="")
-    description = Column(Text, default="")
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
-class Spot(Base):
-    __tablename__ = "spots"
-    id = Column(Integer, primary_key=True, index=True)
-    city_id = Column(String(50), ForeignKey("cities.id"))
-    name = Column(String(100), nullable=False)
-    type = Column(String(20), nullable=False)  # landmark, food, transport
-    lat = Column(Float, nullable=False)
-    lng = Column(Float, nullable=False)
-    desc = Column(Text, default="")
-    price = Column(String(50), default="")
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
-class Route(Base):
-    __tablename__ = "routes"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), nullable=False)
-    description = Column(Text, default="")
-    duration = Column(String(50), default="")
-    difficulty = Column(String(20), default="")
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
-class RouteStep(Base):
-    __tablename__ = "route_steps"
-    id = Column(Integer, primary_key=True, index=True)
-    route_id = Column(Integer, ForeignKey("routes.id"))
-    order = Column(Integer, nullable=False)
-    title = Column(String(100), nullable=False)
-    time = Column(String(50), default="")
-    description = Column(Text, default="")
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+ 
 
 # --- 👇 课程表相关模型 ---
 class Schedule(Base):
