@@ -1,0 +1,850 @@
+/* 东方财富风格自定义样式 */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+    background-color: #1a1a2e;
+    color: #e0e0e0;
+    min-height: 100vh;
+}
+
+.main-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* 标题栏 */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    background: linear-gradient(135deg, #16213e 0%, #1a1a2e 100%);
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #2d2d44;
+}
+
+.main-title {
+    font-size: 28px;
+    font-weight: bold;
+    color: #fff;
+    margin: 0;
+    background: linear-gradient(90deg, #00d4ff, #00ff88);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+    font-size: 14px;
+    color: #888;
+    margin-top: 5px;
+}
+
+.header-right {
+    display: flex;
+    gap: 10px;
+}
+
+.tag {
+    padding: 6px 15px;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 20px;
+    font-size: 12px;
+    color: #00d4ff;
+}
+
+/* 搜索栏 */
+.search-bar {
+    display: flex;
+    gap: 15px;
+    padding: 20px;
+    background: #16213e;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #2d2d44;
+    align-items: flex-end;
+}
+
+.search-item {
+    flex: 1;
+}
+
+.label {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 8px;
+}
+
+.stock-dropdown,
+._dash-dropdown {
+    background: #1a1a2e !important;
+    border: 1px solid #2d2d44 !important;
+    color: #fff !important;
+    border-radius: 5px !important;
+}
+
+.stock-search-input {
+    width: 100%;
+    padding: 6px 15px;
+    background: #1a1a2e !important;
+    border: 1px solid #2d2d44 !important;
+    border-radius: 5px;
+    color: #fff !important;
+    font-size: 14px;
+    height: 42px;
+}
+
+.stock-search-input::placeholder {
+    color: #666 !important;
+    font-size: 13px;
+}
+
+.stock-search-input:focus {
+    border-color: #00d4ff !important;
+    outline: none;
+}
+
+/* 股票搜索容器 */
+.stock-search-container {
+    position: relative;
+}
+
+/* 搜索结果列表 */
+.stock-search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 5px;
+    background: #1a1a2e;
+    border: 1px solid #2d2d44;
+    border-radius: 5px;
+    z-index: 1000;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+/* 搜索结果列表项 */
+.search-result-list {
+    padding: 5px 0;
+}
+
+.search-result-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    color: #e0e0e0;
+    font-size: 14px;
+    border-bottom: 1px solid #2d2d44;
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item:hover {
+    background: #2d2d44;
+}
+
+/* 搜索占位符 */
+.search-placeholder {
+    padding: 10px 15px;
+    color: #666;
+    font-size: 13px;
+}
+
+.search-no-results {
+    padding: 10px 15px;
+    color: #ff6b6b;
+    font-size: 13px;
+}
+
+.search-error {
+    padding: 10px 15px;
+    color: #ff6b6b;
+    font-size: 13px;
+}
+
+/* 当前选中股票显示 */
+.selected-stock-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    background: #1a1a2e;
+    border: 1px solid #00d4ff;
+    border-radius: 5px;
+}
+
+.selected-stock-display .stock-name {
+    color: #00d4ff;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.selected-stock-display .hint {
+    color: #666;
+    font-size: 12px;
+}
+
+.date-input {
+    width: 100%;
+    padding: 6px 15px;
+    background: #1a1a2e !important;
+    border: 1px solid #2d2d44 !important;
+    border-radius: 5px;
+    color: #fff !important;
+    font-size: 14px;
+}
+
+.search-btn {
+    padding: 10px 30px;
+    background: linear-gradient(135deg, #00d4ff 0%, #00ff88 100%) !important;
+    border: none !important;
+    border-radius: 5px;
+    color: #1a1a2e !important;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+    height: 42px;
+}
+
+.search-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4);
+}
+
+/* 加载动画 */
+.loading-container {
+    text-align: center;
+    padding: 50px;
+}
+
+.loading-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 15px;
+    padding: 20px 40px;
+    background: #16213e;
+    border-radius: 10px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 指标卡片 */
+.metrics-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.metric-card {
+    background: #16213e;
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid #2d2d44;
+    text-align: center;
+    transition: all 0.3s;
+}
+
+.metric-card:hover {
+    border-color: #00d4ff;
+    transform: translateY(-3px);
+}
+
+.metric-card.positive {
+    border-left: 3px solid #ff4757;
+}
+
+.metric-card.negative {
+    border-left: 3px solid #2ed573;
+}
+
+.metric-label {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 10px;
+}
+
+.metric-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #fff;
+}
+
+.metric-value.red {
+    color: #ff4757;
+}
+
+.metric-value.green {
+    color: #2ed573;
+}
+
+/* 图表容器 */
+.chart-container {
+    background: #16213e;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid #2d2d44;
+}
+
+.chart-title {
+    font-size: 16px;
+    color: #fff;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #2d2d44;
+}
+
+/* 交易记录 */
+.trade-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.trade-table th {
+    background: #0f3460;
+    color: #00d4ff;
+    padding: 12px;
+    text-align: left;
+}
+
+.trade-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #2d2d44;
+    color: #e0e0e0;
+}
+
+.trade-table tr:hover {
+    background: rgba(0, 212, 255, 0.05);
+}
+
+.trade-type {
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.trade-type.buy {
+    background: rgba(46, 213, 115, 0.2);
+    color: #2ed573;
+}
+
+.trade-type.sell {
+    background: rgba(255, 71, 87, 0.2);
+    color: #ff4757;
+}
+
+/* 策略标题 */
+.result-title {
+    font-size: 20px;
+    color: #fff;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: linear-gradient(90deg, rgba(0, 212, 255, 0.1), rgba(0, 255, 136, 0.1));
+    border-radius: 10px;
+    border-left: 4px solid #00d4ff;
+}
+
+/* Dropdown 样式 - 东方财富风格 */
+.Select-control {
+    background: #1a1a2e !important;
+    border: 1px solid #2d2d44 !important;
+    border-radius: 5px !important;
+    min-height: 42px !important;
+}
+
+.Select-control:hover {
+    border-color: #00d4ff !important;
+}
+
+.Select-control:focus {
+    border-color: #00d4ff !important;
+    box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2) !important;
+}
+
+.Select-menu-outer {
+    background: #16213e !important;
+    border: 1px solid #2d2d44 !important;
+    border-radius: 5px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+    background-clip: padding-box !important;
+}
+
+.Select-value {
+    background: #1a1a2e !important;
+    color: #e0e0e0 !important;
+}
+
+.Select-value-label {
+    color: #e0e0e0 !important;
+    font-size: 14px !important;
+}
+
+.Select-option {
+    background: #16213e !important;
+    color: #b0b0b0 !important;
+    padding: 10px 15px !important;
+    font-size: 14px !important;
+    border-bottom: 1px solid #2d2d44 !important;
+}
+
+.Select-option:last-child {
+    border-bottom: none !important;
+}
+
+.Select-option:hover {
+    background: #0f3460 !important;
+    color: #00d4ff !important;
+}
+
+.Select-option.is-selected {
+    background: rgba(0, 212, 255, 0.15) !important;
+    color: #00d4ff !important;
+}
+
+.Select-option.is-focused {
+    background: rgba(0, 212, 255, 0.08) !important;
+}
+
+/* 搜索框样式 */
+.Select-search-input {
+    background: #1a1a2e !important;
+    border: 1px solid #2d2d44 !important;
+    color: #e0e0e0 !important;
+    font-size: 14px !important;
+}
+
+.Select-search-input:focus {
+    border-color: #00d4ff !important;
+    outline: none !important;
+}
+
+.Select-search-input::-webkit-input-placeholder {
+    color: #666 !important;
+}
+
+.Select-search-input::-moz-placeholder {
+    color: #666 !important;
+}
+
+/* 清除按钮 */
+.Select-clear-zone {
+    color: #666 !important;
+}
+
+.Select-clear-zone:hover {
+    color: #e0e0e0 !important;
+}
+
+/* 下拉箭头 */
+.Select-arrow {
+    color: #666 !important;
+    border-color: #666 transparent transparent !important;
+}
+
+.Select-arrow-zone:hover .Select-arrow {
+    color: #00d4ff !important;
+    border-color: #00d4ff transparent transparent !important;
+}
+
+/* 多选样式 */
+.Select--multi .Select-value {
+    background: rgba(0, 212, 255, 0.15) !important;
+    border: 1px solid rgba(0, 212, 255, 0.25) !important;
+    color: #00d4ff !important;
+}
+
+.Select--multi .Select-value-icon {
+    border-right: 1px solid rgba(0, 212, 255, 0.25) !important;
+}
+
+.Select--multi .Select-value-icon:hover {
+    background: rgba(0, 212, 255, 0.25) !important;
+}
+
+/* 占位符样式 */
+.Select-placeholder {
+    color: #666 !important;
+}
+
+/* 单选中的选中项样式 */
+.Select--single>.Select-control .Select-value {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* 菜单内边距 */
+.Select-menu {
+    padding: 0 !important;
+}
+
+/* Input 样式 */
+input[type="text"] {
+    background: #1a1a2e !important;
+    border: 1px solid #2d2d44 !important;
+    color: #fff !important;
+}
+
+input[type="text"]:focus {
+    border-color: #00d4ff !important;
+    outline: none;
+}
+
+/* Plotly 图表样式覆盖 */
+.js-plotly-plot .plotly .modebar {
+    background: transparent !important;
+}
+
+/* Dash 2.x Dropdown 样式 - 东方财富风格 */
+.dash-dropdown {
+    background-color: #1a1a2e !important;
+    border-color: #2d2d44 !important;
+}
+
+.dash-dropdown .Select-control {
+    background: #1a1a2e !important;
+    border-color: #2d2d44 !important;
+    color: #e0e0e0 !important;
+}
+
+.dash-dropdown .Select-menu-outer {
+    background-color: #16213e !important;
+    border-color: #2d2d44 !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dash-dropdown .Select-option {
+    background-color: #16213e !important;
+    color: #b0b0b0 !important;
+    border-bottom: 1px solid #2d2d44 !important;
+}
+
+.dash-dropdown .Select-option:hover {
+    background-color: #0f3460 !important;
+    color: #00d4ff !important;
+}
+
+.dash-dropdown .Select-option.is-selected {
+    background-color: rgba(0, 212, 255, 0.15) !important;
+    color: #00d4ff !important;
+}
+
+.dash-dropdown .Select-option.is-focused {
+    background-color: rgba(0, 212, 255, 0.08) !important;
+}
+
+.dash-dropdown .Select-value-label {
+    color: #e0e0e0 !important;
+}
+
+.dash-dropdown .Select-placeholder {
+    color: #666 !important;
+}
+
+.dash-dropdown .Select-arrow {
+    border-color: #666 transparent transparent !important;
+}
+
+.dash-dropdown .Select-arrow-zone:hover .Select-arrow {
+    border-color: #00d4ff transparent transparent !important;
+}
+
+/* Dash 2.x 新版 Dropdown 样式 */
+.Select2-dropdown {
+    background-color: #16213e !important;
+    border-color: #2d2d44 !important;
+}
+
+.Select2-dropdown .select2-results__option {
+    background-color: #16213e !important;
+    color: #b0b0b0 !important;
+}
+
+.Select2-dropdown .select2-results__option:hover {
+    background-color: #0f3460 !important;
+    color: #00d4ff !important;
+}
+
+.Select2-dropdown .select2-results__option[aria-selected="true"] {
+    background-color: rgba(0, 212, 255, 0.15) !important;
+    color: #00d4ff !important;
+}
+
+/* 全局下拉框样式重置 */
+div.Select-menu-outer,
+div[class*="Select-menu-outer"] {
+    background-color: #16213e !important;
+    border-color: #2d2d44 !important;
+}
+
+div.Select-option,
+div[class*="Select-option"] {
+    background-color: #16213e !important;
+    color: #b0b0b0 !important;
+}
+
+div.Select-option:hover,
+div[class*="Select-option"]:hover {
+    background-color: #0f3460 !important;
+    color: #00d4ff !important;
+}
+
+/* React Select 样式 - 强制覆盖 */
+[class*="control"] {
+    background-color: #1a1a2e !important;
+    border-color: #2d2d44 !important;
+}
+
+[class*="control"]:hover {
+    border-color: #00d4ff !important;
+}
+
+[class*="control"]:focus {
+    border-color: #00d4ff !important;
+    box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2) !important;
+}
+
+[class*="ValueContainer"] {
+    color: #e0e0e0 !important;
+}
+
+[class*="menu"] {
+    background-color: #16213e !important;
+    border-color: #2d2d44 !important;
+}
+
+[class*="option"] {
+    background-color: #16213e !important;
+    color: #b0b0b0 !important;
+}
+
+[class*="option"]:hover {
+    background-color: #0f3460 !important;
+    color: #00d4ff !important;
+}
+
+[class*="option"][data-selected="true"],
+[class*="option"][aria-selected="true"] {
+    background-color: rgba(0, 212, 255, 0.15) !important;
+    color: #00d4ff !important;
+}
+
+[class*="singleValue"] {
+    color: #e0e0e0 !important;
+}
+
+[class*="indicatorContainer"] {
+    color: #666 !important;
+}
+
+[class*="indicatorContainer"]:hover {
+    color: #00d4ff !important;
+}
+
+[class*="placeholder"] {
+    color: #666 !important;
+}
+
+/* 强制覆盖所有下拉菜单 */
+div[role="listbox"] {
+    background-color: #16213e !important;
+}
+
+div[role="option"] {
+    background-color: #16213e !important;
+    color: #b0b0b0 !important;
+}
+
+div[role="option"]:hover {
+    background-color: #0f3460 !important;
+    color: #00d4ff !important;
+}
+
+div[role="option"][aria-selected="true"] {
+    background-color: rgba(0, 212, 255, 0.15) !important;
+    color: #00d4ff !important;
+}
+
+/* 搜索框样式 - 强制覆盖 */
+.Select-search-input {
+    background: #1a1a2e !important;
+    border: 1px solid #2d2d44 !important;
+    color: #e0e0e0 !important;
+    border-radius: 4px !important;
+    width: 100% !important;
+    padding: 6px 10px !important;
+}
+
+.Select-search-input:focus {
+    border-color: #00d4ff !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2) !important;
+}
+
+.Select-search-input::placeholder {
+    color: #666 !important;
+    opacity: 1 !important;
+}
+
+/* React Select 搜索框 */
+.css-6j8wv5-Input,
+.css-14el2xx-Input {
+    background: #1a1a2e !important;
+    color: #e0e0e0 !important;
+}
+
+.css-6j8wv5-Input input,
+.css-14el2xx-Input input {
+    background: #1a1a2e !important;
+    color: #e0e0e0 !important;
+}
+
+/* 搜索框容器 */
+.Select-search,
+.Select-input,
+.Select-input-container {
+    background: #1a1a2e !important;
+    border-color: #2d2d44 !important;
+}
+
+/* 搜索图标 */
+.Select-search-icon,
+.css-1hb7zxy-IndicatorsContainer svg {
+    color: #666 !important;
+    fill: #666 !important;
+}
+
+/* 强制覆盖所有输入框 */
+.Select-menu-outer input {
+    background: #1a1a2e !important;
+    color: #e0e0e0 !important;
+    border: 1px solid #2d2d44 !important;
+}
+
+.Select-menu-outer input:focus {
+    border-color: #00d4ff !important;
+}
+
+.Select-menu-outer input::placeholder {
+    color: #666 !important;
+}
+
+/* Dash 2.x Dropdown 搜索框 - 精确类名 */
+.dash-dropdown-search-container {
+    background-color: #1a1a2e !important;
+    border-radius: 4px !important;
+    border: 1px solid #2d2d44 !important;
+}
+
+.dash-dropdown-search-container input {
+    background-color: #1a1a2e !important;
+    color: #e0e0e0 !important;
+    border: none !important;
+    outline: none !important;
+    width: 100% !important;
+}
+
+.dash-dropdown-search-container input::placeholder {
+    color: #666 !important;
+    opacity: 1 !important;
+}
+
+.dash-dropdown-search-container svg {
+    color: #666 !important;
+    fill: #666 !important;
+}
+
+/* Dash Dropdown Grid 容器 */
+.dash-dropdown-grid-container {
+    background-color: #16213e !important;
+    border-color: #2d2d44 !important;
+}
+
+/* Dash Dropdown 选项 */
+.dash-dropdown-option {
+    background-color: #16213e !important;
+    color: #b0b0b0 !important;
+    border-bottom: 1px solid #2d2d44 !important;
+}
+
+.dash-dropdown-option:hover {
+    background-color: #0f3460 !important;
+    color: #00d4ff !important;
+}
+
+.dash-dropdown-option[aria-selected="true"] {
+    background-color: rgba(0, 212, 255, 0.15) !important;
+    color: #00d4ff !important;
+}
+
+/* Dash Dropdown 内容容器 */
+.dash-dropdown-content {
+    background-color: #16213e !important;
+    color: #fff !important;
+}
+
+.dash-dropdown-content * {
+    color: #e0e0e0 !important;
+}
+
+/* 滚动条样式 */
+/* WebKit 浏览器 */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1a1a2e;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #2d2d44;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #00d4ff;
+}
+
+/* Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #2d2d44 #1a1a2e;
+}
+
+/* 下拉菜单滚动条 */
+.Select-menu-outer::-webkit-scrollbar {
+    width: 6px;
+}
+
+.Select-menu-outer::-webkit-scrollbar-track {
+    background: #16213e;
+}
+
+.Select-menu-outer::-webkit-scrollbar-thumb {
+    background: #2d2d44;
+}
+
+.Select-menu-outer::-webkit-scrollbar-thumb:hover {
+    background: #00d4ff;
+}
