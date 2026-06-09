@@ -29,14 +29,15 @@ class Backtester:
         self.slippage = slippage or Config.SLIPPAGE
         self.version = 'loop'  # 标识版本
     
-    def run_backtest(self, df, signal_column='signal', stop_loss_pct=0.0, take_profit_pct=0.0, is_st_stock=False):
+    def run_backtest(self, df, signal_column='signal', stop_loss_pct=0.0, take_profit_pct=0.0, is_st_stock=False, stock_symbol=None):
         """
         执行回测（增加止损止盈、涨跌停限制）
         :param df: 包含信号的数据（需包含 open, high, low, close）
         :param signal_column: 信号列名
         :param stop_loss_pct: 止损比例（默认5%）
         :param take_profit_pct: 止盈比例（默认10%）
-        :param is_st_stock: 是否为ST股票（ST涨跌幅限制为5%，非ST为10%）
+        :param is_st_stock: 是否为ST股票（ST涨跌幅限制为5%）
+        :param stock_symbol: 股票代码（用于判断创业板/科创板，如 '300750'）
         :return: 回测结果和交易记录
         """
         df = df.copy()
@@ -47,8 +48,13 @@ class Backtester:
         trade_log = []
         
         # 计算涨跌停价格
-        # ST股票涨跌幅限制为5%，非ST股票为10%
-        limit_ratio = 0.05 if is_st_stock else 0.10
+        # ST股票涨跌幅限制为5%，普通股票为10%，创业板/科创板为20%
+        if is_st_stock:
+            limit_ratio = 0.05
+        elif stock_symbol and (stock_symbol.startswith('300') or stock_symbol.startswith('688')):
+            limit_ratio = 0.20  # 创业板(300开头)和科创板(688开头)涨跌幅为20%
+        else:
+            limit_ratio = 0.10  # 普通股票涨跌幅为10%
         df['prev_close'] = df['close'].shift(1)
         df['limit_up'] = df['prev_close'] * (1 + limit_ratio)  # 涨停价
         df['limit_down'] = df['prev_close'] * (1 - limit_ratio)  # 跌停价
@@ -276,7 +282,7 @@ class VectorizedBacktester:
         self.slippage = slippage or Config.SLIPPAGE
         self.version = 'vectorized'  # 标识版本
     
-    def run_backtest(self, df, signal_column='signal', stop_loss_pct=0.0, take_profit_pct=0.0, is_st_stock=False):
+    def run_backtest(self, df, signal_column='signal', stop_loss_pct=0.0, take_profit_pct=0.0, is_st_stock=False, stock_symbol=None):
         """
         执行回测（改进版本，确保与循环版本一致）
         
@@ -284,13 +290,20 @@ class VectorizedBacktester:
         :param signal_column: 信号列名
         :param stop_loss_pct: 止损比例（默认0表示不启用）
         :param take_profit_pct: 止盈比例（默认0表示不启用）
-        :param is_st_stock: 是否为ST股票（ST涨跌幅限制为5%，非ST为10%）
+        :param is_st_stock: 是否为ST股票（ST涨跌幅限制为5%）
+        :param stock_symbol: 股票代码（用于判断创业板/科创板，如 '300750'）
         :return: (回测结果 DataFrame, 交易记录 DataFrame)
         """
         df = df.copy()
         
         # ========== 1. 计算涨跌停价格 ==========
-        limit_ratio = 0.05 if is_st_stock else 0.10
+        # ST股票涨跌幅限制为5%，普通股票为10%，创业板/科创板为20%
+        if is_st_stock:
+            limit_ratio = 0.05
+        elif stock_symbol and (stock_symbol.startswith('300') or stock_symbol.startswith('688')):
+            limit_ratio = 0.20  # 创业板(300开头)和科创板(688开头)涨跌幅为20%
+        else:
+            limit_ratio = 0.10  # 普通股票涨跌幅为10%
         df['prev_close'] = df['close'].shift(1)
         df['limit_up'] = df['prev_close'] * (1 + limit_ratio)
         df['limit_down'] = df['prev_close'] * (1 - limit_ratio)

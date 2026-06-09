@@ -34,8 +34,22 @@ def run_backtest_cli(symbol, start_date, end_date, strategy_type='dual_ma'):
     
     # 检查是否为ST股票（传入已获取的数据，避免重复API调用）
     is_st = fetcher.is_st_stock(symbol, df)
-    stock_type = "ST股票" if is_st else "普通股票"
-    print(f"股票类型: {stock_type} (涨跌幅限制: {'±5%' if is_st else '±10%'})")
+    
+    # 判断股票类型和涨跌幅限制
+    if is_st:
+        stock_type = "ST股票"
+        limit_str = "±5%"
+    elif symbol.startswith('300'):
+        stock_type = "创业板"
+        limit_str = "±20%"
+    elif symbol.startswith('688'):
+        stock_type = "科创板"
+        limit_str = "±20%"
+    else:
+        stock_type = "普通股票"
+        limit_str = "±10%"
+    
+    print(f"股票类型: {stock_type} (涨跌幅限制: {limit_str})")
     print(f"数据类型: 前复权")
     print("-" * 50)
     
@@ -50,9 +64,9 @@ def run_backtest_cli(symbol, start_date, end_date, strategy_type='dual_ma'):
     # 计算信号
     df = strategy.calculate_signals(df)
     
-    # 执行回测（传入是否为ST股票）
+    # 执行回测（传入是否为ST股票和股票代码）
     backtester = Backtester()
-    df_result, trades = backtester.run_backtest(df, is_st_stock=is_st)
+    df_result, trades = backtester.run_backtest(df, is_st_stock=is_st, stock_symbol=symbol)
     
     # 计算指标
     metrics = backtester.calculate_metrics(df_result)
@@ -70,7 +84,7 @@ def run_backtest_cli(symbol, start_date, end_date, strategy_type='dual_ma'):
     print(f"交易天数: {metrics['交易天数']} 天")
     print(f"策略收益: {metrics['策略收益']:,.2f} 元")
     print(f"股票类型: {stock_type}")
-    print(f"涨跌幅限制: {'±5%' if is_st else '±10%'}")
+    print(f"涨跌幅限制: {limit_str}")
     print("=" * 50)
     
     # 输出交易记录

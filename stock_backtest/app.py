@@ -474,7 +474,16 @@ def run_backtest(state):
         
         # 检查是否为ST股票（传入已获取的数据和股票名称，避免重复API调用）
         is_st = fetcher.is_st_stock(stock_code, df, stock_name)
-        stock_type = "ST股票 (±5%)" if is_st else "普通股票 (±10%)"
+        
+        # 判断股票类型和涨跌幅限制
+        if is_st:
+            stock_type = "ST股票 (±5%)"
+        elif stock_code.startswith('300'):
+            stock_type = "创业板 (±20%)"
+        elif stock_code.startswith('688'):
+            stock_type = "科创板 (±20%)"
+        else:
+            stock_type = "普通股票 (±10%)"
         data_type = "前复权"
         
         # 选择策略
@@ -484,9 +493,9 @@ def run_backtest(state):
         # 计算信号
         df = strategy.calculate_signals(df)
         
-        # 执行回测（传入是否为ST股票）
+        # 执行回测（传入是否为ST股票和股票代码）
         backtester = BacktesterFactory.create_by_strategy(strategy_type)
-        df_result, trades = backtester.run_backtest(df, is_st_stock=is_st)
+        df_result, trades = backtester.run_backtest(df, is_st_stock=is_st, stock_symbol=stock_code)
         
         # 计算指标
         metrics = backtester.calculate_metrics(df_result)
