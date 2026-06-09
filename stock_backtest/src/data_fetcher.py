@@ -215,22 +215,43 @@ class DataFetcher:
                     self.cache_time = current_time
                     return self.stock_list_cache
         
-        # 从网络获取
+        # 从网络获取 - 使用更全面的数据源
+        try:
+            # 方法1：获取所有A股实时行情（包含所有板块）
+            df = ak.stock_zh_a_spot()
+            if df is not None and not df.empty:
+                # 重命名列以统一格式
+                df = df[['代码', '名称']].copy()
+                df.columns = ['code', 'name']
+                # 缓存到文件和内存
+                with open(cache_file, 'wb') as f:
+                    pickle.dump(df, f)
+                self.stock_list_cache = df
+                self.cache_time = current_time
+                return df
+        except Exception as e:
+            print(f"方法1获取股票列表失败: {str(e)}")
+        
+        # 方法2：备用数据源
         try:
             df = ak.stock_info_a_code_name()
-            # 缓存到文件和内存
-            with open(cache_file, 'wb') as f:
-                pickle.dump(df, f)
-            self.stock_list_cache = df
-            self.cache_time = current_time
-            return df
+            if df is not None and not df.empty:
+                # 重命名列以统一格式
+                df.columns = ['code', 'name']
+                # 缓存到文件和内存
+                with open(cache_file, 'wb') as f:
+                    pickle.dump(df, f)
+                self.stock_list_cache = df
+                self.cache_time = current_time
+                return df
         except Exception as e:
-            print(f"获取股票列表失败: {str(e)}")
-            # 如果缓存文件存在，即使过期也尝试使用
-            if os.path.exists(cache_file):
-                with open(cache_file, 'rb') as f:
-                    return pickle.load(f)
-            return pd.DataFrame()
+            print(f"方法2获取股票列表失败: {str(e)}")
+        
+        # 如果都失败，使用缓存文件（即使过期）
+        if os.path.exists(cache_file):
+            with open(cache_file, 'rb') as f:
+                return pickle.load(f)
+        return pd.DataFrame()
     
     def search_stocks(self, keyword, limit=20):
         """
@@ -247,11 +268,12 @@ class DataFetcher:
             if df.empty:
                 return []
             
-            # 过滤：搜索代码或名称
+            # 过滤：搜索代码或名称（支持模糊匹配）
             keyword = keyword.upper()  # 统一大写
             mask = (
-                df['code'].str.upper().str.contains(keyword, na=False) |
-                df['name'].str.contains(keyword, na=False)
+                df['code'].str.upper().str.contains(keyword, na=False, regex=False) |
+                df['name'].str.contains(keyword, na=False, regex=False) |
+                df['name'].str.upper().str.contains(keyword, na=False, regex=False)
             )
             
             # 筛选前N条
