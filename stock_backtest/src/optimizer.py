@@ -5,6 +5,7 @@ from itertools import product
 from .data_fetcher import DataFetcher
 from .strategies import DualMAStrategy, BollingerBandStrategy
 from .backtester import Backtester
+from .logger import backtest_logger, log_function_call
 
 class ParameterOptimizer:
     """参数优化器"""
@@ -46,7 +47,7 @@ class ParameterOptimizer:
                 continue
             
             current += 1
-            print(f"正在测试参数组合 {current}/{total_combinations}: 短期均线={short_window}, 长期均线={long_window}")
+            backtest_logger.info(f"正在测试参数组合 {current}/{total_combinations}: 短期均线={short_window}, 长期均线={long_window}")
             
             try:
                 # 创建策略和回测器
@@ -57,10 +58,12 @@ class ParameterOptimizer:
                 df_signals = strategy.calculate_signals(df)
                 
                 # 执行回测（带止损止盈）
-                df_result, trades = backtester.run_backtest(df_signals, stop_loss_pct=0.05, take_profit_pct=0.15)
+                result = backtester.run_backtest(df_signals, stop_loss_pct=0.05, take_profit_pct=0.15, stock_symbol=symbol)
                 
-                # 计算指标
-                metrics = backtester.calculate_metrics(df_result)
+                # 提取结果（使用统一格式）
+                df_result = result['data']
+                trades = result['trades']
+                metrics = result['stats']
                 
                 # 记录结果
                 results.append({
@@ -74,7 +77,7 @@ class ParameterOptimizer:
                     '最终资金': metrics['最终资金']
                 })
             except Exception as e:
-                print(f"参数组合 ({short_window}, {long_window}) 测试失败: {str(e)}")
+                backtest_logger.error(f"参数组合 ({short_window}, {long_window}) 测试失败: {str(e)}")
         
         # 转换为DataFrame
         results_df = pd.DataFrame(results)
@@ -118,7 +121,7 @@ class ParameterOptimizer:
         for window, std_dev in product(windows, std_devs):
             current += 1
             std_dev_rounded = round(std_dev, 2)
-            print(f"正在测试参数组合 {current}/{total_combinations}: 窗口={window}, 标准差={std_dev_rounded}")
+            backtest_logger.info(f"正在测试参数组合 {current}/{total_combinations}: 窗口={window}, 标准差={std_dev_rounded}")
             
             try:
                 # 创建策略和回测器
@@ -129,10 +132,12 @@ class ParameterOptimizer:
                 df_signals = strategy.calculate_signals(df)
                 
                 # 执行回测（带止损止盈）
-                df_result, trades = backtester.run_backtest(df_signals, stop_loss_pct=0.05, take_profit_pct=0.15)
+                result = backtester.run_backtest(df_signals, stop_loss_pct=0.05, take_profit_pct=0.15, stock_symbol=symbol)
                 
-                # 计算指标
-                metrics = backtester.calculate_metrics(df_result)
+                # 提取结果（使用统一格式）
+                df_result = result['data']
+                trades = result['trades']
+                metrics = result['stats']
                 
                 # 记录结果
                 results.append({
@@ -146,7 +151,7 @@ class ParameterOptimizer:
                     '最终资金': metrics['最终资金']
                 })
             except Exception as e:
-                print(f"参数组合 ({window}, {std_dev_rounded}) 测试失败: {str(e)}")
+                backtest_logger.error(f"参数组合 ({window}, {std_dev_rounded}) 测试失败: {str(e)}")
         
         # 转换为DataFrame
         results_df = pd.DataFrame(results)

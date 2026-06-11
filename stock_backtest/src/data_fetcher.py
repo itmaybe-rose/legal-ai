@@ -5,6 +5,7 @@ import pickle
 import os
 import time
 from config import Config
+from src.logger import data_logger, log_api_call
 
 class DataFetcher:
     def __init__(self):
@@ -13,6 +14,7 @@ class DataFetcher:
         self.stock_list_cache = None  # 内存缓存股票列表
         self.cache_time = 0  # 缓存时间戳
         self._stock_info_cache = {}  # 股票信息缓存（代码->是否为ST）
+        data_logger.info("DataFetcher 初始化完成")
     
     def is_st_stock(self, symbol, df=None, stock_name=None):
         """
@@ -105,7 +107,7 @@ class DataFetcher:
                         self._stock_info_cache[symbol] = True
                         return True
         except Exception as e:
-            print(f"获取股票信息失败: {str(e)}")
+            data_logger.warning(f"获取股票信息失败: {str(e)}")
         
         # 默认为非ST股票
         self._stock_info_cache[symbol] = False
@@ -140,14 +142,14 @@ class DataFetcher:
                 max_cache_age = 24 * 3600 if days_in_range < 30 else 7 * 24 * 3600
                 
                 if cache_age < max_cache_age:
-                    print(f"[缓存] 正在加载缓存数据: {symbol}")
+                    data_logger.info(f"[缓存] 正在加载缓存数据: {symbol}")
                     with open(cache_path, 'rb') as f:
                         df = pickle.load(f)
-                    print(f"[缓存] 缓存加载成功，共 {len(df)} 条数据")
+                    data_logger.info(f"[缓存] 缓存加载成功，共 {len(df)} 条数据")
                     return df
             
             # 从网络获取数据
-            print(f"[网络] 正在获取股票数据: {symbol}")
+            data_logger.info(f"[网络] 正在获取股票数据: {symbol}")
             df = ak.stock_zh_a_daily(
                 symbol=symbol,
                 start_date=start_date,
@@ -156,7 +158,7 @@ class DataFetcher:
             )
             
             if df.empty:
-                print("[警告] 未获取到数据")
+                data_logger.warning("[警告] 未获取到数据")
                 return None
             
             # 将 date 列设置为索引并转换为 datetime
@@ -168,13 +170,13 @@ class DataFetcher:
             if use_cache:
                 with open(cache_path, 'wb') as f:
                     pickle.dump(df, f)
-                print(f"[缓存] 数据已缓存到本地")
+                data_logger.info(f"[缓存] 数据已缓存到本地")
             
-            print(f"[成功] 成功获取 {len(df)} 条数据")
+            data_logger.info(f"[成功] 成功获取 {len(df)} 条数据")
             return df
         
         except Exception as e:
-            print(f"[错误] 获取数据失败: {str(e)}")
+            data_logger.error(f"[错误] 获取数据失败: {str(e)}")
             return None
     
     def save_data(self, df, filename):
@@ -182,7 +184,7 @@ class DataFetcher:
         filepath = os.path.join(self.data_dir, filename)
         with open(filepath, 'wb') as f:
             pickle.dump(df, f)
-        print(f"数据已保存到: {filepath}")
+        data_logger.info(f"数据已保存到: {filepath}")
     
     def load_data(self, filename):
         """从文件加载数据"""
@@ -230,7 +232,7 @@ class DataFetcher:
                 self.cache_time = current_time
                 return df
         except Exception as e:
-            print(f"方法1获取股票列表失败: {str(e)}")
+            data_logger.warning(f"方法1获取股票列表失败: {str(e)}")
         
         # 方法2：备用数据源
         try:
@@ -245,7 +247,7 @@ class DataFetcher:
                 self.cache_time = current_time
                 return df
         except Exception as e:
-            print(f"方法2获取股票列表失败: {str(e)}")
+            data_logger.warning(f"方法2获取股票列表失败: {str(e)}")
         
         # 如果都失败，使用缓存文件（即使过期）
         if os.path.exists(cache_file):
@@ -291,5 +293,5 @@ class DataFetcher:
             return stock_list
             
         except Exception as e:
-            print(f"搜索失败: {str(e)}")
+            data_logger.error(f"搜索失败: {str(e)}")
             return []

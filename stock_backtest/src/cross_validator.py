@@ -4,6 +4,7 @@ import numpy as np
 from .data_fetcher import DataFetcher
 from .strategies import DualMAStrategy, BollingerBandStrategy
 from .backtester import Backtester
+from .logger import backtest_logger
 
 class CrossValidator:
     """交叉验证器 - 用于评估策略的泛化能力"""
@@ -49,7 +50,7 @@ class CrossValidator:
             test_start = test_df.index[0].strftime('%Y-%m-%d')
             test_end = test_df.index[-1].strftime('%Y-%m-%d')
             
-            print(f"周期 {total_periods}: 训练 [{train_start} ~ {train_end}], 测试 [{test_start} ~ {test_end}]")
+            backtest_logger.info(f"周期 {total_periods}: 训练 [{train_start} ~ {train_end}], 测试 [{test_start} ~ {test_end}]")
             
             try:
                 # 创建策略
@@ -70,10 +71,12 @@ class CrossValidator:
                 test_with_signals = strategy.calculate_signals(test_df)
                 
                 # 执行回测（带止损止盈）
-                df_result, trades = backtester.run_backtest(test_with_signals, stop_loss_pct=0.05, take_profit_pct=0.15)
+                result = backtester.run_backtest(test_with_signals, stop_loss_pct=0.05, take_profit_pct=0.15, stock_symbol=symbol)
                 
-                # 计算指标
-                metrics = backtester.calculate_metrics(df_result)
+                # 提取结果（使用统一格式）
+                df_result = result['data']
+                trades = result['trades']
+                metrics = result['stats']
                 
                 results.append({
                     'period': total_periods,
@@ -90,7 +93,7 @@ class CrossValidator:
                 })
                 
             except Exception as e:
-                print(f"周期 {total_periods} 验证失败: {str(e)}")
+                backtest_logger.error(f"周期 {total_periods} 验证失败: {str(e)}")
         
         # 转换为DataFrame
         results_df = pd.DataFrame(results)
@@ -150,10 +153,10 @@ class CrossValidator:
         if df is None or df.empty:
             return None
         
-        print(f"\n--- 参数敏感性测试（扰动幅度: {perturbation*100}%）---")
+        backtest_logger.info(f"\n--- 参数敏感性测试（扰动幅度: {perturbation*100}%）---")
         
         for i, params in enumerate(params_list):
-            print(f"测试参数组合 {i+1}/6: {params}")
+            backtest_logger.info(f"测试参数组合 {i+1}/6: {params}")
             
             try:
                 if strategy_type == 'dual_ma':
@@ -163,8 +166,12 @@ class CrossValidator:
                 
                 backtester = Backtester()
                 df_signals = strategy.calculate_signals(df)
-                df_result, trades = backtester.run_backtest(df_signals)
-                metrics = backtester.calculate_metrics(df_result)
+                result = backtester.run_backtest(df_signals, stock_symbol=symbol)
+                
+                # 提取结果（使用统一格式）
+                df_result = result['data']
+                trades = result['trades']
+                metrics = result['stats']
                 
                 results.append({
                     'params': str(params),
@@ -175,7 +182,7 @@ class CrossValidator:
                     '交易次数': len(trades)
                 })
             except Exception as e:
-                print(f"参数组合 {params} 测试失败: {str(e)}")
+                backtest_logger.error(f"参数组合 {params} 测试失败: {str(e)}")
         
         return pd.DataFrame(results)
     
@@ -212,8 +219,12 @@ class CrossValidator:
         
         # 完整数据集回测（样本内）
         df_signals = strategy.calculate_signals(df)
-        df_result, full_trades = backtester.run_backtest(df_signals)
-        full_metrics = backtester.calculate_metrics(df_result)
+        result = backtester.run_backtest(df_signals, stock_symbol=symbol)
+        
+        # 提取结果（使用统一格式）
+        df_result = result['data']
+        full_trades = result['trades']
+        full_metrics = result['stats']
         
         # 滚动向前验证（样本外）
         cv_results = self.walk_forward_validation(

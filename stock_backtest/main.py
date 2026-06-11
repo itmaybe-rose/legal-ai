@@ -45,6 +45,9 @@ def run_backtest_cli(symbol, start_date, end_date, strategy_type='dual_ma'):
     elif symbol.startswith('688'):
         stock_type = "科创板"
         limit_str = "±20%"
+    elif symbol.startswith('8'):
+        stock_type = "北交所"
+        limit_str = "±30%"
     else:
         stock_type = "普通股票"
         limit_str = "±10%"
@@ -66,10 +69,12 @@ def run_backtest_cli(symbol, start_date, end_date, strategy_type='dual_ma'):
     
     # 执行回测（传入是否为ST股票和股票代码）
     backtester = Backtester()
-    df_result, trades = backtester.run_backtest(df, is_st_stock=is_st, stock_symbol=symbol)
+    result = backtester.run_backtest(df, is_st_stock=is_st, stock_symbol=symbol)
     
-    # 计算指标
-    metrics = backtester.calculate_metrics(df_result)
+    # 提取结果（使用统一格式）
+    df_result = result['data']
+    trades = result['trades']
+    metrics = result['stats']
     
     # 输出结果
     print(f"\n【{strategy_name}回测结果】")

@@ -9,6 +9,7 @@ from config import Config
 from src.data_fetcher import DataFetcher
 from src.strategies import DualMAStrategy, BollingerBandStrategy
 from src.backtester import BacktesterFactory
+from src.logger import web_logger
 
 # ============================================================================
 # 通用样式常量
@@ -444,6 +445,8 @@ def run_backtest(state):
     end_date = params.get('end_date')
     strategy_type = params.get('strategy_type')
     
+    web_logger.info(f"[Web] 回测请求 | 股票={symbol} | 策略={strategy_type}")
+    
     try:
         # 标准化日期格式
         start_date = normalize_date(start_date)
@@ -482,6 +485,8 @@ def run_backtest(state):
             stock_type = "创业板 (±20%)"
         elif stock_code.startswith('688'):
             stock_type = "科创板 (±20%)"
+        elif stock_code.startswith('8'):
+            stock_type = "北交所 (±30%)"
         else:
             stock_type = "普通股票 (±10%)"
         data_type = "前复权"
@@ -495,10 +500,12 @@ def run_backtest(state):
         
         # 执行回测（传入是否为ST股票和股票代码）
         backtester = BacktesterFactory.create_by_strategy(strategy_type)
-        df_result, trades = backtester.run_backtest(df, is_st_stock=is_st, stock_symbol=stock_code)
+        result = backtester.run_backtest(df, is_st_stock=is_st, stock_symbol=stock_code)
         
-        # 计算指标
-        metrics = backtester.calculate_metrics(df_result)
+        # 提取结果（使用统一格式）
+        df_result = result['data']
+        trades = result['trades']
+        metrics = result['stats']
         
         # 创建指标卡片
         is_profit = metrics['累计收益率'] >= 0
@@ -550,6 +557,7 @@ def run_backtest(state):
         return {'display': 'none'}, results, {'display': 'block'}, {**state, 'status': 'completed'}
     
     except Exception as e:
+        web_logger.error(f"[Web] 回测失败 | 股票={symbol} | 错误={str(e)}")
         return {'display': 'none'}, \
                [html.P(f"回测失败: {str(e)}", style={'color': '#ff4757', 'textAlign': 'center', 'padding': '50px'})], \
                {'display': 'block'}, {**state, 'status': 'error'}

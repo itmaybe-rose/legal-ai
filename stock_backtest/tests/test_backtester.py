@@ -37,8 +37,10 @@ def test_backtester_versions():
     print("\n[测试1] 向量化版本回测")
     start_time = time.time()
     vectorized_backtester = BacktesterFactory.create_backtester(vectorized=True)
-    df_vec, trades_vec = vectorized_backtester.run_backtest(df)
-    metrics_vec = vectorized_backtester.calculate_metrics(df_vec)
+    result_vec = vectorized_backtester.run_backtest(df)
+    df_vec = result_vec['data']
+    trades_vec = result_vec['trades']
+    metrics_vec = result_vec['stats']
     elapsed_vec = time.time() - start_time
     
     print(f"版本类型: {vectorized_backtester.version}")
@@ -54,8 +56,10 @@ def test_backtester_versions():
     print("\n[测试2] 循环版本回测")
     start_time = time.time()
     loop_backtester = BacktesterFactory.create_backtester(vectorized=False)
-    df_loop, trades_loop = loop_backtester.run_backtest(df)
-    metrics_loop = loop_backtester.calculate_metrics(df_loop)
+    result_loop = loop_backtester.run_backtest(df)
+    df_loop = result_loop['data']
+    trades_loop = result_loop['trades']
+    metrics_loop = result_loop['stats']
     elapsed_loop = time.time() - start_time
     
     print(f"版本类型: {loop_backtester.version}")

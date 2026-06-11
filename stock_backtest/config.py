@@ -26,3 +26,12 @@ class Config:
     DEFAULT_SYMBOL = "sh600519"  # 贵州茅台
     DEFAULT_START_DATE = "20230101"
     DEFAULT_END_DATE = "20241231"
+    
+    # 日志配置
+    LOG_DIR = "logs/"
+    LOG_LEVEL = "INFO"           # DEBUG, INFO, WARNING, ERROR, CRITICAL
+    LOG_FORMAT = '%(asctime)s | %(levelname)-8s | %(name)s | %(message)s'
+    LOG_MAX_BYTES = 10 * 1024 * 1024  # 10MB
+    LOG_BACKUP_COUNT = 5
+    LOG_CONSOLE_OUTPUT = True
+    LOG_FILE_OUTPUT = True
