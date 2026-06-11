@@ -10,3 +10,8 @@ vector_stores/
 # Virtual environments
 .venv
 
+.idea/
+.vscode/
+*.pyc
+venv/
+env/
